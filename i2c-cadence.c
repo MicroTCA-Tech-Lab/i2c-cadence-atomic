@@ -947,6 +947,10 @@ static int cdns_i2c_master_xfer_atomic(struct i2c_adapter *adap,
 	struct cdns_i2c *id = adap->algo_data;
 	bool hold_quirk;
 
+	ret = pm_runtime_resume_and_get(id->dev);
+	if (ret < 0)
+		return ret;
+
 	/* Check if the bus is free */
 
 	ret = readl_relaxed_poll_timeout(id->membase + CDNS_I2C_SR_OFFSET, reg,
@@ -1014,6 +1018,8 @@ static int cdns_i2c_master_xfer_atomic(struct i2c_adapter *adap,
 	ret = num;
 
 out:
+	pm_runtime_mark_last_busy(id->dev);
+	pm_runtime_put_autosuspend(id->dev);
 	return ret;
 }
 /**
