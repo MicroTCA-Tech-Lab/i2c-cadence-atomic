@@ -1,4 +1,4 @@
-obj-m := i2c-xiic.o
+obj-m := i2c-cadence.o
 
 SRC := $(shell pwd)
 

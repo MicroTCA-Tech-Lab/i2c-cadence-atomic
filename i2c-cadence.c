@@ -18,42 +18,41 @@
 #include <linux/pinctrl/consumer.h>
 
 /* Register offsets for the I2C device. */
-#define CDNS_I2C_CR_OFFSET		0x00 /* Control Register, RW */
-#define CDNS_I2C_SR_OFFSET		0x04 /* Status Register, RO */
-#define CDNS_I2C_ADDR_OFFSET		0x08 /* I2C Address Register, RW */
-#define CDNS_I2C_DATA_OFFSET		0x0C /* I2C Data Register, RW */
-#define CDNS_I2C_ISR_OFFSET		0x10 /* IRQ Status Register, RW */
-#define CDNS_I2C_XFER_SIZE_OFFSET	0x14 /* Transfer Size Register, RW */
-#define CDNS_I2C_TIME_OUT_OFFSET	0x1C /* Time Out Register, RW */
-#define CDNS_I2C_IMR_OFFSET		0x20 /* IRQ Mask Register, RO */
-#define CDNS_I2C_IER_OFFSET		0x24 /* IRQ Enable Register, WO */
-#define CDNS_I2C_IDR_OFFSET		0x28 /* IRQ Disable Register, WO */
+#define CDNS_I2C_CR_OFFSET 0x00 /* Control Register, RW */
+#define CDNS_I2C_SR_OFFSET 0x04 /* Status Register, RO */
+#define CDNS_I2C_ADDR_OFFSET 0x08 /* I2C Address Register, RW */
+#define CDNS_I2C_DATA_OFFSET 0x0C /* I2C Data Register, RW */
+#define CDNS_I2C_ISR_OFFSET 0x10 /* IRQ Status Register, RW */
+#define CDNS_I2C_XFER_SIZE_OFFSET 0x14 /* Transfer Size Register, RW */
+#define CDNS_I2C_TIME_OUT_OFFSET 0x1C /* Time Out Register, RW */
+#define CDNS_I2C_IMR_OFFSET 0x20 /* IRQ Mask Register, RO */
+#define CDNS_I2C_IER_OFFSET 0x24 /* IRQ Enable Register, WO */
+#define CDNS_I2C_IDR_OFFSET 0x28 /* IRQ Disable Register, WO */
 
 /* Control Register Bit mask definitions */
-#define CDNS_I2C_CR_HOLD		BIT(4) /* Hold Bus bit */
-#define CDNS_I2C_CR_ACK_EN		BIT(3)
-#define CDNS_I2C_CR_NEA			BIT(2)
-#define CDNS_I2C_CR_MS			BIT(1)
+#define CDNS_I2C_CR_HOLD BIT(4) /* Hold Bus bit */
+#define CDNS_I2C_CR_ACK_EN BIT(3)
+#define CDNS_I2C_CR_NEA BIT(2)
+#define CDNS_I2C_CR_MS BIT(1)
 /* Read or Write Master transfer 0 = Transmitter, 1 = Receiver */
-#define CDNS_I2C_CR_RW			BIT(0)
+#define CDNS_I2C_CR_RW BIT(0)
 /* 1 = Auto init FIFO to zeroes */
-#define CDNS_I2C_CR_CLR_FIFO		BIT(6)
-#define CDNS_I2C_CR_DIVA_SHIFT		14
-#define CDNS_I2C_CR_DIVA_MASK		(3 << CDNS_I2C_CR_DIVA_SHIFT)
-#define CDNS_I2C_CR_DIVB_SHIFT		8
-#define CDNS_I2C_CR_DIVB_MASK		(0x3f << CDNS_I2C_CR_DIVB_SHIFT)
+#define CDNS_I2C_CR_CLR_FIFO BIT(6)
+#define CDNS_I2C_CR_DIVA_SHIFT 14
+#define CDNS_I2C_CR_DIVA_MASK (3 << CDNS_I2C_CR_DIVA_SHIFT)
+#define CDNS_I2C_CR_DIVB_SHIFT 8
+#define CDNS_I2C_CR_DIVB_MASK (0x3f << CDNS_I2C_CR_DIVB_SHIFT)
 
-#define CDNS_I2C_CR_MASTER_EN_MASK	(CDNS_I2C_CR_NEA | \
-					 CDNS_I2C_CR_ACK_EN | \
-					 CDNS_I2C_CR_MS)
+#define CDNS_I2C_CR_MASTER_EN_MASK \
+	(CDNS_I2C_CR_NEA | CDNS_I2C_CR_ACK_EN | CDNS_I2C_CR_MS)
 
-#define CDNS_I2C_CR_SLAVE_EN_MASK	~CDNS_I2C_CR_MASTER_EN_MASK
+#define CDNS_I2C_CR_SLAVE_EN_MASK ~CDNS_I2C_CR_MASTER_EN_MASK
 
 /* Status Register Bit mask definitions */
-#define CDNS_I2C_SR_BA		BIT(8)
-#define CDNS_I2C_SR_TXDV	BIT(6)
-#define CDNS_I2C_SR_RXDV	BIT(5)
-#define CDNS_I2C_SR_RXRW	BIT(3)
+#define CDNS_I2C_SR_BA BIT(8)
+#define CDNS_I2C_SR_TXDV BIT(6)
+#define CDNS_I2C_SR_RXDV BIT(5)
+#define CDNS_I2C_SR_RXRW BIT(3)
 
 /*
  * I2C Address Register Bit mask definitions
@@ -61,78 +60,65 @@
  * bits. A write access to this register always initiates a transfer if the I2C
  * is in master mode.
  */
-#define CDNS_I2C_ADDR_MASK	0x000003FF /* I2C Address Mask */
+#define CDNS_I2C_ADDR_MASK 0x000003FF /* I2C Address Mask */
 
 /*
  * I2C Interrupt Registers Bit mask definitions
  * All the four interrupt registers (Status/Mask/Enable/Disable) have the same
  * bit definitions.
  */
-#define CDNS_I2C_IXR_ARB_LOST		BIT(9)
-#define CDNS_I2C_IXR_RX_UNF		BIT(7)
-#define CDNS_I2C_IXR_TX_OVF		BIT(6)
-#define CDNS_I2C_IXR_RX_OVF		BIT(5)
-#define CDNS_I2C_IXR_SLV_RDY		BIT(4)
-#define CDNS_I2C_IXR_TO			BIT(3)
-#define CDNS_I2C_IXR_NACK		BIT(2)
-#define CDNS_I2C_IXR_DATA		BIT(1)
-#define CDNS_I2C_IXR_COMP		BIT(0)
+#define CDNS_I2C_IXR_ARB_LOST BIT(9)
+#define CDNS_I2C_IXR_RX_UNF BIT(7)
+#define CDNS_I2C_IXR_TX_OVF BIT(6)
+#define CDNS_I2C_IXR_RX_OVF BIT(5)
+#define CDNS_I2C_IXR_SLV_RDY BIT(4)
+#define CDNS_I2C_IXR_TO BIT(3)
+#define CDNS_I2C_IXR_NACK BIT(2)
+#define CDNS_I2C_IXR_DATA BIT(1)
+#define CDNS_I2C_IXR_COMP BIT(0)
 
-#define CDNS_I2C_IXR_ALL_INTR_MASK	(CDNS_I2C_IXR_ARB_LOST | \
-					 CDNS_I2C_IXR_RX_UNF | \
-					 CDNS_I2C_IXR_TX_OVF | \
-					 CDNS_I2C_IXR_RX_OVF | \
-					 CDNS_I2C_IXR_SLV_RDY | \
-					 CDNS_I2C_IXR_TO | \
-					 CDNS_I2C_IXR_NACK | \
-					 CDNS_I2C_IXR_DATA | \
-					 CDNS_I2C_IXR_COMP)
+#define CDNS_I2C_IXR_ALL_INTR_MASK                                           \
+	(CDNS_I2C_IXR_ARB_LOST | CDNS_I2C_IXR_RX_UNF | CDNS_I2C_IXR_TX_OVF | \
+	 CDNS_I2C_IXR_RX_OVF | CDNS_I2C_IXR_SLV_RDY | CDNS_I2C_IXR_TO |      \
+	 CDNS_I2C_IXR_NACK | CDNS_I2C_IXR_DATA | CDNS_I2C_IXR_COMP)
 
-#define CDNS_I2C_IXR_ERR_INTR_MASK	(CDNS_I2C_IXR_ARB_LOST | \
-					 CDNS_I2C_IXR_RX_UNF | \
-					 CDNS_I2C_IXR_TX_OVF | \
-					 CDNS_I2C_IXR_RX_OVF | \
-					 CDNS_I2C_IXR_NACK)
+#define CDNS_I2C_IXR_ERR_INTR_MASK                                           \
+	(CDNS_I2C_IXR_ARB_LOST | CDNS_I2C_IXR_RX_UNF | CDNS_I2C_IXR_TX_OVF | \
+	 CDNS_I2C_IXR_RX_OVF | CDNS_I2C_IXR_NACK)
 
-#define CDNS_I2C_ENABLED_INTR_MASK	(CDNS_I2C_IXR_ARB_LOST | \
-					 CDNS_I2C_IXR_RX_UNF | \
-					 CDNS_I2C_IXR_TX_OVF | \
-					 CDNS_I2C_IXR_RX_OVF | \
-					 CDNS_I2C_IXR_NACK | \
-					 CDNS_I2C_IXR_DATA | \
-					 CDNS_I2C_IXR_COMP)
+#define CDNS_I2C_ENABLED_INTR_MASK                                           \
+	(CDNS_I2C_IXR_ARB_LOST | CDNS_I2C_IXR_RX_UNF | CDNS_I2C_IXR_TX_OVF | \
+	 CDNS_I2C_IXR_RX_OVF | CDNS_I2C_IXR_NACK | CDNS_I2C_IXR_DATA |       \
+	 CDNS_I2C_IXR_COMP)
 
-#define CDNS_I2C_IXR_SLAVE_INTR_MASK	(CDNS_I2C_IXR_RX_UNF | \
-					 CDNS_I2C_IXR_TX_OVF | \
-					 CDNS_I2C_IXR_RX_OVF | \
-					 CDNS_I2C_IXR_TO | \
-					 CDNS_I2C_IXR_NACK | \
-					 CDNS_I2C_IXR_DATA | \
-					 CDNS_I2C_IXR_COMP)
+#define CDNS_I2C_IXR_SLAVE_INTR_MASK                                       \
+	(CDNS_I2C_IXR_RX_UNF | CDNS_I2C_IXR_TX_OVF | CDNS_I2C_IXR_RX_OVF | \
+	 CDNS_I2C_IXR_TO | CDNS_I2C_IXR_NACK | CDNS_I2C_IXR_DATA |         \
+	 CDNS_I2C_IXR_COMP)
 
-#define CDNS_I2C_TIMEOUT		msecs_to_jiffies(1000)
+#define CDNS_I2C_TIMEOUT msecs_to_jiffies(1000)
 /* timeout for pm runtime autosuspend */
-#define CNDS_I2C_PM_TIMEOUT		1000	/* ms */
+#define CNDS_I2C_PM_TIMEOUT 1000 /* ms */
 
-#define CDNS_I2C_FIFO_DEPTH		16
+#define CDNS_I2C_FIFO_DEPTH 16
 /* FIFO depth at which the DATA interrupt occurs */
-#define CDNS_I2C_DATA_INTR_DEPTH	(CDNS_I2C_FIFO_DEPTH - 2)
-#define CDNS_I2C_MAX_TRANSFER_SIZE	255
+#define CDNS_I2C_DATA_INTR_DEPTH (CDNS_I2C_FIFO_DEPTH - 2)
+#define CDNS_I2C_MAX_TRANSFER_SIZE 255
 /* Transfer size in multiples of data interrupt depth */
-#define CDNS_I2C_TRANSFER_SIZE	(CDNS_I2C_MAX_TRANSFER_SIZE - 3)
+#define CDNS_I2C_TRANSFER_SIZE (CDNS_I2C_MAX_TRANSFER_SIZE - 3)
 
-#define DRIVER_NAME		"cdns-i2c"
+#define DRIVER_NAME "cdns-i2c"
 
-#define CDNS_I2C_DIVA_MAX	4
-#define CDNS_I2C_DIVB_MAX	64
+#define CDNS_I2C_DIVA_MAX 4
+#define CDNS_I2C_DIVB_MAX 64
 
-#define CDNS_I2C_TIMEOUT_MAX	0xFF
+#define CDNS_I2C_TIMEOUT_MAX 0xFF
 
-#define CDNS_I2C_BROKEN_HOLD_BIT	BIT(0)
-#define CDNS_I2C_POLL_US	100000
-#define CDNS_I2C_TIMEOUT_US	500000
+#define CDNS_I2C_BROKEN_HOLD_BIT BIT(0)
+#define CDNS_I2C_POLL_US 100000
+#define CDNS_I2C_TIMEOUT_US 500000
 
-#define cdns_i2c_readreg(offset)       readl_relaxed(id->membase + offset)
+#define cdns_i2c_readreg(offset) readl_relaxed(id->membase + offset)
 #define cdns_i2c_writereg(val, offset) writel_relaxed(val, id->membase + offset)
 
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
@@ -189,7 +175,7 @@ enum cdns_i2c_slave_state {
  * @slave_state:	I2C Slave state(idle/read/write).
  */
 struct cdns_i2c {
-	struct device		*dev;
+	struct device *dev;
 	void __iomem *membase;
 	struct i2c_adapter adap;
 	struct i2c_msg *p_msg;
@@ -221,8 +207,7 @@ struct cdns_platform_data {
 	u32 quirks;
 };
 
-#define to_cdns_i2c(_nb)	container_of(_nb, struct cdns_i2c, \
-					     clk_rate_change_nb)
+#define to_cdns_i2c(_nb) container_of(_nb, struct cdns_i2c, clk_rate_change_nb)
 
 /**
  * cdns_i2c_clear_bus_hold - Clear bus hold bit
@@ -260,7 +245,7 @@ static void cdns_i2c_set_mode(enum cdns_i2c_mode mode, struct cdns_i2c *id)
 	case CDNS_I2C_MODE_MASTER:
 		/* Enable i2c master */
 		cdns_i2c_writereg(id->ctrl_reg_diva_divb |
-				  CDNS_I2C_CR_MASTER_EN_MASK,
+					  CDNS_I2C_CR_MASTER_EN_MASK,
 				  CDNS_I2C_CR_OFFSET);
 		/*
 		 * This delay is needed to give the IP some time to switch to
@@ -273,7 +258,7 @@ static void cdns_i2c_set_mode(enum cdns_i2c_mode mode, struct cdns_i2c *id)
 	case CDNS_I2C_MODE_SLAVE:
 		/* Enable i2c slave */
 		cdns_i2c_writereg(id->ctrl_reg_diva_divb &
-				  CDNS_I2C_CR_SLAVE_EN_MASK,
+					  CDNS_I2C_CR_SLAVE_EN_MASK,
 				  CDNS_I2C_CR_OFFSET);
 
 		/* Setting slave address */
@@ -418,9 +403,8 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 	updatetx = id->recv_count > id->curr_recv_count;
 
 	/* When receiving, handle data interrupt and completion interrupt */
-	if (id->p_recv_buf &&
-	    ((isr_status & CDNS_I2C_IXR_COMP) ||
-	     (isr_status & CDNS_I2C_IXR_DATA))) {
+	if (id->p_recv_buf && ((isr_status & CDNS_I2C_IXR_COMP) ||
+			       (isr_status & CDNS_I2C_IXR_DATA))) {
 		/* Read data if receive data valid is set */
 		while (cdns_i2c_readreg(CDNS_I2C_SR_OFFSET) &
 		       CDNS_I2C_SR_RXDV) {
@@ -475,7 +459,7 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 						      CDNS_I2C_FIFO_DEPTH;
 			} else {
 				cdns_i2c_writereg(id->recv_count -
-						  CDNS_I2C_FIFO_DEPTH,
+							  CDNS_I2C_FIFO_DEPTH,
 						  CDNS_I2C_XFER_SIZE_OFFSET);
 				id->curr_recv_count = id->recv_count;
 			}
@@ -498,17 +482,17 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 		 * space available in FIFO and fill with that many bytes.
 		 */
 		if (id->send_count) {
-			avail_bytes = CDNS_I2C_FIFO_DEPTH -
-			    cdns_i2c_readreg(CDNS_I2C_XFER_SIZE_OFFSET);
+			avail_bytes =
+				CDNS_I2C_FIFO_DEPTH -
+				cdns_i2c_readreg(CDNS_I2C_XFER_SIZE_OFFSET);
 			if (id->send_count > avail_bytes)
 				bytes_to_send = avail_bytes;
 			else
 				bytes_to_send = id->send_count;
 
 			while (bytes_to_send--) {
-				cdns_i2c_writereg(
-					(*(id->p_send_buf)++),
-					 CDNS_I2C_DATA_OFFSET);
+				cdns_i2c_writereg((*(id->p_send_buf)++),
+						  CDNS_I2C_DATA_OFFSET);
 				id->send_count--;
 			}
 		} else {
@@ -630,7 +614,8 @@ static void cdns_i2c_mrecv(struct cdns_i2c *id)
 	addr &= CDNS_I2C_ADDR_MASK;
 
 	if (hold_clear) {
-		ctrl_reg = cdns_i2c_readreg(CDNS_I2C_CR_OFFSET) & ~CDNS_I2C_CR_HOLD;
+		ctrl_reg = cdns_i2c_readreg(CDNS_I2C_CR_OFFSET) &
+			   ~CDNS_I2C_CR_HOLD;
 		/*
 		 * In case of Xilinx Zynq SOC, clear the HOLD bit before transfer size
 		 * register reaches '0'. This is an IP bug which causes transfer size
@@ -693,7 +678,7 @@ static void cdns_i2c_msend(struct cdns_i2c *id)
 	 * Enable the interrupts.
 	 */
 	avail_bytes = CDNS_I2C_FIFO_DEPTH -
-				cdns_i2c_readreg(CDNS_I2C_XFER_SIZE_OFFSET);
+		      cdns_i2c_readreg(CDNS_I2C_XFER_SIZE_OFFSET);
 
 	if (id->send_count > avail_bytes)
 		bytes_to_send = avail_bytes;
@@ -713,7 +698,7 @@ static void cdns_i2c_msend(struct cdns_i2c *id)
 		cdns_i2c_clear_bus_hold(id);
 	/* Set the slave address in address register - triggers operation. */
 	cdns_i2c_writereg(id->p_msg->addr & CDNS_I2C_ADDR_MASK,
-						CDNS_I2C_ADDR_OFFSET);
+			  CDNS_I2C_ADDR_OFFSET);
 
 	cdns_i2c_writereg(CDNS_I2C_ENABLED_INTR_MASK, CDNS_I2C_IER_OFFSET);
 }
@@ -748,7 +733,7 @@ static void cdns_i2c_master_reset(struct i2c_adapter *adap)
 }
 
 static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
-		struct i2c_adapter *adap)
+				struct i2c_adapter *adap)
 {
 	unsigned long time_left, msg_timeout;
 	u32 reg;
@@ -762,11 +747,11 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 	if (msg->flags & I2C_M_TEN) {
 		if (reg & CDNS_I2C_CR_NEA)
 			cdns_i2c_writereg(reg & ~CDNS_I2C_CR_NEA,
-					CDNS_I2C_CR_OFFSET);
+					  CDNS_I2C_CR_OFFSET);
 	} else {
 		if (!(reg & CDNS_I2C_CR_NEA))
 			cdns_i2c_writereg(reg | CDNS_I2C_CR_NEA,
-					CDNS_I2C_CR_OFFSET);
+					  CDNS_I2C_CR_OFFSET);
 	}
 
 	/* Check for the R/W flag on each msg */
@@ -776,7 +761,8 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 		cdns_i2c_msend(id);
 
 	/* Minimal time to execute this message */
-	msg_timeout = msecs_to_jiffies((1000 * msg->len * BITS_PER_BYTE) / id->i2c_clk);
+	msg_timeout = msecs_to_jiffies((1000 * msg->len * BITS_PER_BYTE) /
+				       id->i2c_clk);
 	/* Plus some wiggle room */
 	msg_timeout += msecs_to_jiffies(500);
 
@@ -787,20 +773,19 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 	time_left = wait_for_completion_timeout(&id->xfer_done, msg_timeout);
 	if (time_left == 0) {
 		cdns_i2c_master_reset(adap);
-		dev_err(id->adap.dev.parent,
-				"timeout waiting on completion\n");
+		dev_err(id->adap.dev.parent, "timeout waiting on completion\n");
 		return -ETIMEDOUT;
 	}
 
-	cdns_i2c_writereg(CDNS_I2C_IXR_ALL_INTR_MASK,
-			  CDNS_I2C_IDR_OFFSET);
+	cdns_i2c_writereg(CDNS_I2C_IXR_ALL_INTR_MASK, CDNS_I2C_IDR_OFFSET);
 
 	/* If it is bus arbitration error, try again */
 	if (id->err_status & CDNS_I2C_IXR_ARB_LOST)
 		return -EAGAIN;
 
 	if (msg->flags & I2C_M_RECV_LEN)
-		msg->len += min_t(unsigned int, msg->buf[0], I2C_SMBUS_BLOCK_MAX);
+		msg->len +=
+			min_t(unsigned int, msg->buf[0], I2C_SMBUS_BLOCK_MAX);
 
 	return 0;
 }
@@ -846,8 +831,7 @@ static int cdns_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	/* Check if the bus is free */
 
-	ret = readl_relaxed_poll_timeout(id->membase + CDNS_I2C_SR_OFFSET,
-					 reg,
+	ret = readl_relaxed_poll_timeout(id->membase + CDNS_I2C_SR_OFFSET, reg,
 					 !(reg & CDNS_I2C_SR_BA),
 					 CDNS_I2C_POLL_US, CDNS_I2C_TIMEOUT_US);
 	if (ret) {
@@ -872,8 +856,9 @@ static int cdns_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		 */
 		for (count = 0; (count < num - 1 && hold_quirk); count++) {
 			if (msgs[count].flags & I2C_M_RD) {
-				dev_warn(adap->dev.parent,
-					 "Can't do repeated start after a receive message\n");
+				dev_warn(
+					adap->dev.parent,
+					"Can't do repeated start after a receive message\n");
 				ret = -EOPNOTSUPP;
 				goto out;
 			}
@@ -932,8 +917,8 @@ out:
 static u32 cdns_i2c_func(struct i2c_adapter *adap)
 {
 	u32 func = I2C_FUNC_I2C | I2C_FUNC_10BIT_ADDR |
-			(I2C_FUNC_SMBUS_EMUL & ~I2C_FUNC_SMBUS_QUICK) |
-			I2C_FUNC_SMBUS_BLOCK_DATA;
+		   (I2C_FUNC_SMBUS_EMUL & ~I2C_FUNC_SMBUS_QUICK) |
+		   I2C_FUNC_SMBUS_BLOCK_DATA;
 
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
 	func |= I2C_FUNC_SLAVE;
@@ -946,8 +931,8 @@ static u32 cdns_i2c_func(struct i2c_adapter *adap)
 static int cdns_reg_slave(struct i2c_client *slave)
 {
 	int ret;
-	struct cdns_i2c *id = container_of(slave->adapter, struct cdns_i2c,
-									adap);
+	struct cdns_i2c *id =
+		container_of(slave->adapter, struct cdns_i2c, adap);
 
 	if (id->slave)
 		return -EBUSY;
@@ -970,8 +955,8 @@ static int cdns_reg_slave(struct i2c_client *slave)
 
 static int cdns_unreg_slave(struct i2c_client *slave)
 {
-	struct cdns_i2c *id = container_of(slave->adapter, struct cdns_i2c,
-									adap);
+	struct cdns_i2c *id =
+		container_of(slave->adapter, struct cdns_i2c, adap);
 
 	pm_runtime_put(id->dev);
 
@@ -986,11 +971,11 @@ static int cdns_unreg_slave(struct i2c_client *slave)
 #endif
 
 static const struct i2c_algorithm cdns_i2c_algo = {
-	.master_xfer	= cdns_i2c_master_xfer,
-	.functionality	= cdns_i2c_func,
+	.master_xfer = cdns_i2c_master_xfer,
+	.functionality = cdns_i2c_func,
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
-	.reg_slave	= cdns_reg_slave,
-	.unreg_slave	= cdns_unreg_slave,
+	.reg_slave = cdns_reg_slave,
+	.unreg_slave = cdns_unreg_slave,
 #endif
 };
 
@@ -1007,7 +992,7 @@ static const struct i2c_algorithm cdns_i2c_algo = {
  * Return: 0 on success, negative errno otherwise.
  */
 static int cdns_i2c_calc_divs(unsigned long *f, unsigned long input_clk,
-		unsigned int *a, unsigned int *b)
+			      unsigned int *a, unsigned int *b)
 {
 	unsigned long fscl = *f, best_fscl = *f, actual_fscl, temp;
 	unsigned int div_a, div_b, calc_div_a = 0, calc_div_b = 0;
@@ -1084,12 +1069,12 @@ static int cdns_i2c_setclk(unsigned long clk_in, struct cdns_i2c *id)
 	ctrl_reg = id->ctrl_reg;
 	ctrl_reg &= ~(CDNS_I2C_CR_DIVA_MASK | CDNS_I2C_CR_DIVB_MASK);
 	ctrl_reg |= ((div_a << CDNS_I2C_CR_DIVA_SHIFT) |
-			(div_b << CDNS_I2C_CR_DIVB_SHIFT));
+		     (div_b << CDNS_I2C_CR_DIVB_SHIFT));
 	id->ctrl_reg = ctrl_reg;
 	cdns_i2c_writereg(ctrl_reg, CDNS_I2C_CR_OFFSET);
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
-	id->ctrl_reg_diva_divb = ctrl_reg & (CDNS_I2C_CR_DIVA_MASK |
-				 CDNS_I2C_CR_DIVB_MASK);
+	id->ctrl_reg_diva_divb =
+		ctrl_reg & (CDNS_I2C_CR_DIVA_MASK | CDNS_I2C_CR_DIVB_MASK);
 #endif
 	return 0;
 }
@@ -1110,8 +1095,8 @@ static int cdns_i2c_setclk(unsigned long clk_in, struct cdns_i2c *id)
  *		to acknowledge the change, NOTIFY_DONE if the notification is
  *		considered irrelevant.
  */
-static int cdns_i2c_clk_notifier_cb(struct notifier_block *nb, unsigned long
-		event, void *data)
+static int cdns_i2c_clk_notifier_cb(struct notifier_block *nb,
+				    unsigned long event, void *data)
 {
 	struct clk_notifier_data *ndata = data;
 	struct cdns_i2c *id = to_cdns_i2c(nb);
@@ -1120,8 +1105,7 @@ static int cdns_i2c_clk_notifier_cb(struct notifier_block *nb, unsigned long
 		return NOTIFY_OK;
 
 	switch (event) {
-	case PRE_RATE_CHANGE:
-	{
+	case PRE_RATE_CHANGE: {
 		unsigned long input_clk = ndata->new_rate;
 		unsigned long fscl = id->i2c_clk;
 		unsigned int div_a, div_b;
@@ -1130,7 +1114,7 @@ static int cdns_i2c_clk_notifier_cb(struct notifier_block *nb, unsigned long
 		ret = cdns_i2c_calc_divs(&fscl, input_clk, &div_a, &div_b);
 		if (ret) {
 			dev_warn(id->adap.dev.parent,
-					"clock rate change rejected\n");
+				 "clock rate change rejected\n");
 			return NOTIFY_STOP;
 		}
 
@@ -1216,10 +1200,8 @@ static int __maybe_unused cdns_i2c_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops cdns_i2c_dev_pm_ops = {
-	SET_RUNTIME_PM_OPS(cdns_i2c_runtime_suspend,
-			   cdns_i2c_runtime_resume, NULL)
-};
+static const struct dev_pm_ops cdns_i2c_dev_pm_ops = { SET_RUNTIME_PM_OPS(
+	cdns_i2c_runtime_suspend, cdns_i2c_runtime_resume, NULL) };
 
 static const struct cdns_platform_data r1p10_i2c_def = {
 	.quirks = CDNS_I2C_BROKEN_HOLD_BIT,
@@ -1227,7 +1209,9 @@ static const struct cdns_platform_data r1p10_i2c_def = {
 
 static const struct of_device_id cdns_i2c_of_match[] = {
 	{ .compatible = "cdns,i2c-r1p10", .data = &r1p10_i2c_def },
-	{ .compatible = "cdns,i2c-r1p14",},
+	{
+		.compatible = "cdns,i2c-r1p14",
+	},
 	{ /* end of table */ }
 };
 MODULE_DEVICE_TABLE(of, cdns_i2c_of_match);
@@ -1266,7 +1250,8 @@ static int cdns_i2c_probe(struct platform_device *pdev)
 	if (IS_ERR(id->rinfo.pinctrl)) {
 		int err = PTR_ERR(id->rinfo.pinctrl);
 
-		dev_info(&pdev->dev, "can't get pinctrl, bus recovery not supported\n");
+		dev_info(&pdev->dev,
+			 "can't get pinctrl, bus recovery not supported\n");
 		if (err != -ENODEV)
 			return err;
 	} else {
@@ -1286,12 +1271,12 @@ static int cdns_i2c_probe(struct platform_device *pdev)
 	id->adap.dev.of_node = pdev->dev.of_node;
 	id->adap.algo = &cdns_i2c_algo;
 	id->adap.timeout = CDNS_I2C_TIMEOUT;
-	id->adap.retries = 3;		/* Default retry value. */
+	id->adap.retries = 3; /* Default retry value. */
 	id->adap.algo_data = id;
 	id->adap.dev.parent = &pdev->dev;
 	init_completion(&id->xfer_done);
-	snprintf(id->adap.name, sizeof(id->adap.name),
-		 "Cadence I2C at %08lx", (unsigned long)r_mem->start);
+	snprintf(id->adap.name, sizeof(id->adap.name), "Cadence I2C at %08lx",
+		 (unsigned long)r_mem->start);
 
 	id->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(id->clk))
@@ -1313,7 +1298,7 @@ static int cdns_i2c_probe(struct platform_device *pdev)
 	id->input_clk = clk_get_rate(id->clk);
 
 	ret = of_property_read_u32(pdev->dev.of_node, "clock-frequency",
-			&id->i2c_clk);
+				   &id->i2c_clk);
 	if (ret || (id->i2c_clk > I2C_MAX_FAST_MODE_FREQ))
 		id->i2c_clk = I2C_MAX_STANDARD_MODE_FREQ;
 
@@ -1332,7 +1317,7 @@ static int cdns_i2c_probe(struct platform_device *pdev)
 	}
 
 	ret = devm_request_irq(&pdev->dev, id->irq, cdns_i2c_isr, 0,
-				 DRIVER_NAME, id);
+			       DRIVER_NAME, id);
 	if (ret) {
 		dev_err(&pdev->dev, "cannot get irq %d\n", id->irq);
 		goto err_clk_dis;
@@ -1343,8 +1328,8 @@ static int cdns_i2c_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err_clk_dis;
 
-	dev_info(&pdev->dev, "%u kHz mmio %08lx irq %d\n",
-		 id->i2c_clk / 1000, (unsigned long)r_mem->start, id->irq);
+	dev_info(&pdev->dev, "%u kHz mmio %08lx irq %d\n", id->i2c_clk / 1000,
+		 (unsigned long)r_mem->start, id->irq);
 
 	return 0;
 
