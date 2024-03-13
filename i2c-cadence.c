@@ -367,24 +367,17 @@ static irqreturn_t cdns_i2c_slave_isr(void *ptr)
 }
 #endif
 
-/**
- * cdns_i2c_master_isr - Interrupt handler for the I2C device in master role
- * @ptr:       Pointer to I2C device private data
- *
- * This function handles the data interrupt, transfer complete interrupt and
- * the error interrupts of the I2C device in master role.
- *
- * Return: IRQ_HANDLED always
+/* 
+ * Check completion of I2C transaction either from interrupt or process context
  */
-static irqreturn_t cdns_i2c_master_isr(void *ptr)
+static int cdns_i2c_check_completion(struct cdns_i2c *id, irqreturn_t *status)
 {
 	unsigned int isr_status, avail_bytes;
 	unsigned int bytes_to_send;
 	bool updatetx;
-	struct cdns_i2c *id = ptr;
 	/* Signal completion only after everything is updated */
 	int done_flag = 0;
-	irqreturn_t status = IRQ_NONE;
+	*status = IRQ_NONE;
 
 	isr_status = cdns_i2c_readreg(CDNS_I2C_ISR_OFFSET);
 	cdns_i2c_writereg(isr_status, CDNS_I2C_ISR_OFFSET);
@@ -393,7 +386,7 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 	/* Handling nack and arbitration lost interrupt */
 	if (isr_status & (CDNS_I2C_IXR_NACK | CDNS_I2C_IXR_ARB_LOST)) {
 		done_flag = 1;
-		status = IRQ_HANDLED;
+		*status = IRQ_HANDLED;
 	}
 
 	/*
@@ -472,7 +465,7 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 			done_flag = 1;
 		}
 
-		status = IRQ_HANDLED;
+		*status = IRQ_HANDLED;
 	}
 
 	/* When sending, handle transfer complete interrupt */
@@ -506,13 +499,33 @@ static irqreturn_t cdns_i2c_master_isr(void *ptr)
 		if (!id->send_count && !id->bus_hold_flag)
 			cdns_i2c_clear_bus_hold(id);
 
-		status = IRQ_HANDLED;
+		*status = IRQ_HANDLED;
 	}
 
 	/* Update the status for errors */
 	id->err_status |= isr_status & CDNS_I2C_IXR_ERR_INTR_MASK;
 	if (id->err_status)
-		status = IRQ_HANDLED;
+		*status = IRQ_HANDLED;
+
+	return done_flag;
+}
+
+/**
+ * cdns_i2c_master_isr - Interrupt handler for the I2C device in master role
+ * @ptr:       Pointer to I2C device private data
+ *
+ * This function handles the data interrupt, transfer complete interrupt and
+ * the error interrupts of the I2C device in master role.
+ *
+ * Return: IRQ_HANDLED always
+ */
+static irqreturn_t cdns_i2c_master_isr(void *ptr)
+{
+	struct cdns_i2c *id = ptr;
+	irqreturn_t status;
+	int done_flag;
+
+	done_flag = cdns_i2c_check_completion(id, &status);
 
 	if (done_flag)
 		complete(&id->xfer_done);
@@ -545,7 +558,7 @@ static irqreturn_t cdns_i2c_isr(int irq, void *ptr)
  * cdns_i2c_mrecv - Prepare and start a master receive operation
  * @id:		pointer to the i2c device structure
  */
-static void cdns_i2c_mrecv(struct cdns_i2c *id)
+static void cdns_i2c_mrecv(struct cdns_i2c *id, int atomic)
 {
 	unsigned int ctrl_reg;
 	unsigned int isr_status;
@@ -623,7 +636,7 @@ static void cdns_i2c_mrecv(struct cdns_i2c *id)
 		 * disable the interrupts on current processor core between register
 		 * writes to slave address register and control register.
 		 */
-		if (irq_save)
+		if (irq_save && !atomic)
 			local_irq_save(flags);
 
 		cdns_i2c_writereg(addr, CDNS_I2C_ADDR_OFFSET);
@@ -631,7 +644,7 @@ static void cdns_i2c_mrecv(struct cdns_i2c *id)
 		/* Read it back to avoid bufferring and make sure write happens */
 		cdns_i2c_readreg(CDNS_I2C_CR_OFFSET);
 
-		if (irq_save)
+		if (irq_save && !atomic)
 			local_irq_restore(flags);
 	} else {
 		cdns_i2c_writereg(addr, CDNS_I2C_ADDR_OFFSET);
@@ -733,7 +746,7 @@ static void cdns_i2c_master_reset(struct i2c_adapter *adap)
 }
 
 static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
-				struct i2c_adapter *adap)
+				struct i2c_adapter *adap, int atomic)
 {
 	unsigned long time_left, msg_timeout;
 	u32 reg;
@@ -756,7 +769,7 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 
 	/* Check for the R/W flag on each msg */
 	if (msg->flags & I2C_M_RD)
-		cdns_i2c_mrecv(id);
+		cdns_i2c_mrecv(id, atomic);
 	else
 		cdns_i2c_msend(id);
 
@@ -770,11 +783,24 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 		msg_timeout = adap->timeout;
 
 	/* Wait for the signal of completion */
-	time_left = wait_for_completion_timeout(&id->xfer_done, msg_timeout);
-	if (time_left == 0) {
-		cdns_i2c_master_reset(adap);
-		dev_err(id->adap.dev.parent, "timeout waiting on completion\n");
-		return -ETIMEDOUT;
+	if (!atomic) {
+		/* Wait for completion signal from ISR */
+		time_left = wait_for_completion_timeout(&id->xfer_done,
+							msg_timeout);
+		if (time_left == 0) {
+			goto timeout;
+		}
+	} else {
+		/* Interrupts are disabled; we have to poll for completion */
+		/* Fixed timeout of 500ms */
+		msg_timeout = 500;
+		irqreturn_t dummy;
+		while (!cdns_i2c_check_completion(id, &dummy)) {
+			udelay(1000);
+			if (!msg_timeout--) {
+				goto timeout;
+			}
+		}
 	}
 
 	cdns_i2c_writereg(CDNS_I2C_IXR_ALL_INTR_MASK, CDNS_I2C_IDR_OFFSET);
@@ -788,6 +814,11 @@ static int cdns_i2c_process_msg(struct cdns_i2c *id, struct i2c_msg *msg,
 			min_t(unsigned int, msg->buf[0], I2C_SMBUS_BLOCK_MAX);
 
 	return 0;
+
+timeout:
+	cdns_i2c_master_reset(adap);
+	dev_err(id->adap.dev.parent, "timeout waiting on completion\n");
+	return -ETIMEDOUT;
 }
 
 /**
@@ -876,7 +907,7 @@ static int cdns_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		if (count == (num - 1))
 			id->bus_hold_flag = 0;
 
-		ret = cdns_i2c_process_msg(id, msgs, adap);
+		ret = cdns_i2c_process_msg(id, msgs, adap, 0);
 		if (ret)
 			goto out;
 
@@ -908,6 +939,83 @@ out:
 	return ret;
 }
 
+static int cdns_i2c_master_xfer_atomic(struct i2c_adapter *adap,
+				       struct i2c_msg *msgs, int num)
+{
+	int ret, count;
+	u32 reg;
+	struct cdns_i2c *id = adap->algo_data;
+	bool hold_quirk;
+
+	/* Check if the bus is free */
+
+	ret = readl_relaxed_poll_timeout(id->membase + CDNS_I2C_SR_OFFSET, reg,
+					 !(reg & CDNS_I2C_SR_BA),
+					 CDNS_I2C_POLL_US, CDNS_I2C_TIMEOUT_US);
+	if (ret) {
+		ret = -EAGAIN;
+		if (id->adap.bus_recovery_info)
+			i2c_recover_bus(adap);
+		goto out;
+	}
+
+	hold_quirk = !!(id->quirks & CDNS_I2C_BROKEN_HOLD_BIT);
+	/*
+	 * Set the flag to one when multiple messages are to be
+	 * processed with a repeated start.
+	 */
+	if (num > 1) {
+		/*
+		 * This controller does not give completion interrupt after a
+		 * master receive message if HOLD bit is set (repeated start),
+		 * resulting in SW timeout. Hence, if a receive message is
+		 * followed by any other message, an error is returned
+		 * indicating that this sequence is not supported.
+		 */
+		for (count = 0; (count < num - 1 && hold_quirk); count++) {
+			if (msgs[count].flags & I2C_M_RD) {
+				dev_warn(
+					adap->dev.parent,
+					"Can't do repeated start after a receive message\n");
+				ret = -EOPNOTSUPP;
+				goto out;
+			}
+		}
+		id->bus_hold_flag = 1;
+		reg = cdns_i2c_readreg(CDNS_I2C_CR_OFFSET);
+		reg |= CDNS_I2C_CR_HOLD;
+		cdns_i2c_writereg(reg, CDNS_I2C_CR_OFFSET);
+	} else {
+		id->bus_hold_flag = 0;
+	}
+
+	/* Process the msg one by one */
+	for (count = 0; count < num; count++, msgs++) {
+		if (count == (num - 1))
+			id->bus_hold_flag = 0;
+
+		ret = cdns_i2c_process_msg(id, msgs, adap, 1);
+		if (ret)
+			goto out;
+
+		/* Report the other error interrupts to application */
+		if (id->err_status) {
+			cdns_i2c_master_reset(adap);
+
+			if (id->err_status & CDNS_I2C_IXR_NACK) {
+				ret = -ENXIO;
+				goto out;
+			}
+			ret = -EIO;
+			goto out;
+		}
+	}
+
+	ret = num;
+
+out:
+	return ret;
+}
 /**
  * cdns_i2c_func - Returns the supported features of the I2C driver
  * @adap:	pointer to the i2c adapter structure
@@ -972,6 +1080,7 @@ static int cdns_unreg_slave(struct i2c_client *slave)
 
 static const struct i2c_algorithm cdns_i2c_algo = {
 	.master_xfer = cdns_i2c_master_xfer,
+	.master_xfer_atomic = cdns_i2c_master_xfer_atomic,
 	.functionality = cdns_i2c_func,
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
 	.reg_slave = cdns_reg_slave,
